@@ -1,0 +1,266 @@
+"use client";
+
+import moment from "moment";
+import { formatAmount } from "@/utils/functions/formatAmount";
+import { useSettingModal } from "@/contexts/modal-setting";
+
+const TransactionDepositModal = () => {
+  const { modals, modalData, closeModal } = useSettingModal();
+  const handleCopy = (targetId: string) => {
+    const element = document.getElementById(targetId);
+    if (element) {
+      const text = element.textContent || "";
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {})
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+        });
+    }
+  };
+
+  const transaction = modalData?.transactionDepositModal?.transaction;
+  if (!transaction) return null;
+
+  const onClose = () => {
+    closeModal("transactionDepositModal");
+  };
+
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "text-yellow-600";
+      case "COMPLETED":
+        return "text-green-600";
+      case "FAILED":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  // Helper function to format transaction type
+  const getTransactionTypeDisplay = (type: string, transactionType: string) => {
+    if (type === "BF_WALLET_TOP_UP") return "Wallet Top-up";
+    return transactionType === "CREDIT" ? "Credit" : "Debit";
+  };
+
+
+  return (
+    <>
+      <div
+        className={`${
+          modals.transactionDepositModal ? "flex" : "hidden"
+        } fixed inset-0 bg-black/30 items-center justify-center z-[55]`}
+      >
+        <button
+          onClick={onClose}
+          className={`w-full z-0 fixed items-center justify-center h-full bg-black bg-opacity-[75%] ${
+            modals.transactionDepositModal ? "flex" : "hidden"
+          }`}
+        />
+        <div className="relative w-[552px] max-w-full max-h-[70dvh] overflow-y-auto bg-white rounded-[10px] font-inter">
+          <button className="absolute right-6 top-8" onClick={onClose}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M11.0327 8.05147L15.5814 3.62238C16.1395 3.07886 16.1395 2.19765 15.5814 1.65369L14.5705 0.669353C14.0123 0.125841 13.1073 0.125841 12.5486 0.669353L8 5.09845L3.45136 0.669353C2.89318 0.125841 1.98818 0.125841 1.42955 0.669353L0.418636 1.65369C-0.139545 2.19721 -0.139545 3.07842 0.418636 3.62238L4.96727 8.05147L0.418636 12.4806C-0.139545 13.0241 -0.139545 13.9053 0.418636 14.4492L1.42955 15.4336C1.98773 15.9771 2.89318 15.9771 3.45136 15.4336L8 11.0045L12.5486 15.4336C13.1068 15.9771 14.0123 15.9771 14.5705 15.4336L15.5814 14.4492C16.1395 13.9057 16.1395 13.0245 15.5814 12.4806L11.0327 8.05147Z"
+                fill="#808080"
+              />
+            </svg>
+          </button>
+          <div className="w-full py-9 px-6">
+            <div className="flex justify-center items-center">
+              {transaction.status === "PENDING" ? (
+                <svg
+                  width="123"
+                  height="123"
+                  viewBox="0 0 123 123"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    opacity="0.25"
+                    cx="61.5"
+                    cy="61.5"
+                    r="61.5"
+                    fill="#FEF3C7"
+                  />
+                  <rect
+                    x="30"
+                    y="30"
+                    width="63.3636"
+                    height="63.3636"
+                    rx="30"
+                    fill="#F59E0B"
+                  />
+                  <path
+                    d="M61.5 45C60.6716 45 60 45.6716 60 46.5V61.5C60 62.3284 60.6716 63 61.5 63C62.3284 63 63 62.3284 63 61.5V46.5C63 45.6716 62.3284 45 61.5 45ZM61.5 69C60.6716 69 60 69.6716 60 70.5C60 71.3284 60.6716 72 61.5 72C62.3284 72 63 71.3284 63 70.5C63 69.6716 62.3284 69 61.5 69Z"
+                    fill="white"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  width="123"
+                  height="123"
+                  viewBox="0 0 123 123"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    opacity="0.25"
+                    cx="61.5"
+                    cy="61.5"
+                    r="61.5"
+                    fill="#C3DBEC"
+                  />
+                  <rect
+                    x="30"
+                    y="30"
+                    width="63.3636"
+                    height="63.3636"
+                    rx="30"
+                    fill="#4D94C5"
+                  />
+                  <path
+                    d="M56.8834 74.5785L45.5124 63.2074C44.8292 62.5243 44.8292 61.4166 45.5124 60.7334L47.9863 58.2593C48.6695 57.5761 49.7772 57.5761 50.4604 58.2593L58.1205 65.9194L74.5275 49.5124C75.2107 48.8292 76.3184 48.8292 77.0016 49.5124L79.4755 51.9864C80.1587 52.6695 80.1587 53.7772 79.4755 54.4604L59.3575 74.5786C58.6743 75.2617 57.5666 75.2617 56.8834 74.5785Z"
+                    fill="white"
+                  />
+                </svg>
+              )}
+            </div>
+            <p className="mt-7 text-center font-bold text-2xl leading-[100%]">
+              {transaction.status === "PENDING" ? "Pending" : "Successful"}
+            </p>
+            <p className="mt-4 font-normal text-base leading-[100%] tracking-[0%] flex items-center gap-1 justify-center">
+              Transaction ID: <span id="txndepositid">{transaction?.uuid|| transaction.id}</span>{" "}
+              <button
+                onClick={() => handleCopy("txndepositid")}
+                className="cursor-pointer"
+                title="Copy to clipboard"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 15 15"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.7812 3.75H2.34375C2.21943 3.75 2.1002 3.79939 2.01229 3.88729C1.92439 3.9752 1.875 4.09443 1.875 4.21875V12.6562C1.875 12.7806 1.92439 12.8998 2.01229 12.9877C2.1002 13.0756 2.21943 13.125 2.34375 13.125H10.7812C10.9056 13.125 11.0248 13.0756 11.1127 12.9877C11.2006 12.8998 11.25 12.7806 11.25 12.6562V4.21875C11.25 4.09443 11.2006 3.9752 11.1127 3.88729C11.0248 3.79939 10.9056 3.75 10.7812 3.75ZM10.3125 12.1875H2.8125V4.6875H10.3125V12.1875ZM13.125 2.34375V10.7812C13.125 10.9056 13.0756 11.0248 12.9877 11.1127C12.8998 11.2006 12.7806 11.25 12.6562 11.25C12.5319 11.25 12.4127 11.2006 12.3248 11.1127C12.2369 11.0248 12.1875 10.9056 12.1875 10.7812V2.8125H4.21875C4.09443 2.8125 3.9752 2.76311 3.88729 2.67521C3.79939 2.5873 3.75 2.46807 3.75 2.34375C3.75 2.21943 3.79939 2.1002 3.88729 2.01229C3.9752 1.92439 4.09443 1.875 4.21875 1.875H12.6562C12.7806 1.875 12.8998 1.92439 12.9877 2.01229C13.0756 2.1002 13.125 2.21943 13.125 2.34375Z"
+                    fill="#616061"
+                  />
+                </svg>
+              </button>
+            </p>
+            <div className="mt-7 flex justify-center items-center">
+              <span className="inline-block bg-[#eceff2] py-[14px] px-[26px] text-[32px] leading-[100%] tracking-[100%] font-medium rounded-[10px]">
+                {transaction.transactionType === "CREDIT" ? "+" : "-"}
+                UGX {formatAmount(String(Math.abs(transaction.amount)))}
+              </span>
+            </div>
+
+            <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+              <span>Transaction Type</span>
+              <span>
+                {getTransactionTypeDisplay(
+                  transaction.type,
+                  transaction.transactionType
+                )}
+              </span>
+            </div>
+
+            <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+              <span>Status</span>
+              <span className={getStatusColor(transaction.status)}>
+                {transaction.status}
+              </span>
+            </div>
+
+            <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+              <span>Description</span>
+              <span>{transaction.description || "N/A"}</span>
+            </div>
+
+            <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+              <span>Date & time</span>
+              <span>
+                {moment(transaction.createdAt).format(
+                  "Do MMMM, YYYY [at] h:mmA"
+                )}
+              </span>
+            </div>
+
+            <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+              <span>Payment Method</span>
+              <span className="capitalize">{transaction.paymentType}</span>
+            </div>
+
+            {transaction.reference && (
+              <div className="mt-7 w-full p-[20px] flex justify-between items-center border-b border-[#D9D9D9] font-medium text-base leading-[100%] tracking-[0%]">
+                <span>Reference</span>
+                <span className="text-sm">{transaction.reference}</span>
+              </div>
+            )}
+
+            <div className="mt-7 flex justify-center items-center gap-8">
+              <button>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="32" height="32" rx="16" fill="#1170B2" />
+                  <path
+                    d="M9.52833 15.4928C9.40324 15.3727 9.33296 15.2098 9.33296 15.04C9.33296 14.8702 9.40324 14.7073 9.52833 14.5872C9.65343 14.4671 9.82309 14.3996 10 14.3996C10.1769 14.3996 10.3466 14.4671 10.4717 14.5872L15.3333 19.2552V8.64C15.3333 8.47026 15.4036 8.30747 15.5286 8.18745C15.6536 8.06743 15.8232 8 16 8C16.1768 8 16.3464 8.06743 16.4714 8.18745C16.5964 8.30747 16.6667 8.47026 16.6667 8.64V19.2552L21.5283 14.5872C21.5903 14.5277 21.6638 14.4806 21.7447 14.4484C21.8257 14.4162 21.9124 14.3996 22 14.3996C22.0876 14.3996 22.1743 14.4162 22.2553 14.4484C22.3362 14.4806 22.4097 14.5277 22.4717 14.5872C22.5336 14.6467 22.5827 14.7173 22.6163 14.7949C22.6498 14.8726 22.667 14.9559 22.667 15.04C22.667 15.1241 22.6498 15.2074 22.6163 15.2851C22.5827 15.3627 22.5336 15.4333 22.4717 15.4928L16.4717 21.2528C16.4098 21.3123 16.3362 21.3595 16.2553 21.3917C16.1744 21.4239 16.0876 21.4405 16 21.4405C15.9124 21.4405 15.8256 21.4239 15.7447 21.3917C15.6638 21.3595 15.5902 21.3123 15.5283 21.2528L9.52833 15.4928ZM23.3333 22.72H8.66667C8.48986 22.72 8.32029 22.7874 8.19526 22.9075C8.07024 23.0275 8 23.1903 8 23.36C8 23.5297 8.07024 23.6925 8.19526 23.8125C8.32029 23.9326 8.48986 24 8.66667 24H23.3333C23.5101 24 23.6797 23.9326 23.8047 23.8125C23.9298 23.6925 24 23.5297 24 23.36C24 23.1903 23.9298 23.0275 23.8047 22.9075C23.6797 22.7874 23.5101 22.72 23.3333 22.72Z"
+                    fill="white"
+                  />
+                </svg>
+              </button>
+              <button>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="32" height="32" rx="16" fill="#1170B2" />
+                  <path
+                    d="M22.9646 11.3333H21.7857V8.66667C21.7857 8.48986 21.718 8.32029 21.5974 8.19526C21.4769 8.07024 21.3134 8 21.1429 8H10.8571C10.6866 8 10.5231 8.07024 10.4026 8.19526C10.282 8.32029 10.2143 8.48986 10.2143 8.66667V11.3333H9.03545C7.91286 11.3333 7 12.2308 7 13.3333V20C7 20.1768 7.06773 20.3464 7.18829 20.4714C7.30885 20.5964 7.47236 20.6667 7.64286 20.6667H10.2143V23.3333C10.2143 23.5101 10.282 23.6797 10.4026 23.8047C10.5231 23.9298 10.6866 24 10.8571 24H21.1429C21.3134 24 21.4769 23.9298 21.5974 23.8047C21.718 23.6797 21.7857 23.5101 21.7857 23.3333V20.6667H24.3571C24.5276 20.6667 24.6912 20.5964 24.8117 20.4714C24.9323 20.3464 25 20.1768 25 20V13.3333C25 12.2308 24.0871 11.3333 22.9646 11.3333ZM11.5 9.33333H20.5V11.3333H11.5V9.33333ZM20.5 22.6667H11.5V18.6667H20.5V22.6667ZM23.7143 19.3333H21.7857V18C21.7857 17.8232 21.718 17.6536 21.5974 17.5286C21.4769 17.4036 21.3134 17.3333 21.1429 17.3333H10.8571C10.6866 17.3333 10.5231 17.4036 10.4026 17.5286C10.282 17.6536 10.2143 17.8232 10.2143 18V19.3333H8.28571V13.3333C8.28571 12.9658 8.62241 12.6667 9.03545 12.6667H22.9646C23.3776 12.6667 23.7143 12.9658 23.7143 13.3333V19.3333ZM21.7857 15C21.7857 15.1978 21.7292 15.3911 21.6232 15.5556C21.5172 15.72 21.3666 15.8482 21.1904 15.9239C21.0142 15.9996 20.8204 16.0194 20.6333 15.9808C20.4463 15.9422 20.2744 15.847 20.1396 15.7071C20.0047 15.5673 19.9129 15.3891 19.8757 15.1951C19.8385 15.0011 19.8576 14.8 19.9305 14.6173C20.0035 14.4346 20.1271 14.2784 20.2857 14.1685C20.4443 14.0586 20.6307 14 20.8214 14C21.0772 14 21.3224 14.1054 21.5033 14.2929C21.6841 14.4804 21.7857 14.7348 21.7857 15Z"
+                    fill="white"
+                  />
+                </svg>
+              </button>
+              <button>
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="32" height="32" rx="16" fill="#1170B2" />
+                  <path
+                    d="M19.3774 18.2483C19.0021 18.2482 18.6307 18.3234 18.285 18.4694C17.9394 18.6154 17.6265 18.8293 17.365 19.0984L14.1236 17.0151C14.3786 16.3612 14.3786 15.6355 14.1236 14.9816L17.365 12.8983C17.8519 13.397 18.5066 13.6972 19.2023 13.7406C19.8979 13.7841 20.5849 13.5677 21.13 13.1334C21.6752 12.6991 22.0396 12.0778 22.1528 11.3901C22.2659 10.7023 22.1196 9.99705 21.7423 9.41103C21.3649 8.825 20.7835 8.39996 20.1106 8.2183C19.4377 8.03664 18.7213 8.11132 18.1003 8.42784C17.4793 8.74436 16.998 9.28018 16.7497 9.93142C16.5013 10.5827 16.5036 11.3029 16.7561 11.9526L13.5147 14.0359C13.1244 13.6352 12.6234 13.36 12.0759 13.2454C11.5283 13.1309 10.959 13.1822 10.4408 13.3929C9.92258 13.6036 9.47896 13.964 9.16664 14.4281C8.85432 14.8922 8.6875 15.4389 8.6875 15.9983C8.6875 16.5578 8.85432 17.1045 9.16664 17.5686C9.47896 18.0327 9.92258 18.3931 10.4408 18.6038C10.959 18.8145 11.5283 18.8658 12.0759 18.7513C12.6234 18.6367 13.1244 18.3615 13.5147 17.9608L16.7561 20.0441C16.539 20.6042 16.5068 21.2191 16.6644 21.7987C16.822 22.3783 17.161 22.8923 17.6319 23.2653C18.1027 23.6383 18.6806 23.8508 19.2809 23.8717C19.8812 23.8925 20.4724 23.7206 20.968 23.3811C21.4635 23.0416 21.8373 22.5524 22.0347 21.985C22.2321 21.4177 22.2427 20.8021 22.0649 20.2283C21.8871 19.6546 21.5302 19.1528 21.0466 18.7965C20.563 18.4402 19.978 18.2481 19.3774 18.2483ZM19.3774 9.24835C19.7111 9.24835 20.0374 9.34732 20.3149 9.53274C20.5924 9.71817 20.8087 9.98172 20.9364 10.2901C21.0641 10.5984 21.0976 10.9377 21.0324 11.2651C20.9673 11.5924 20.8066 11.8931 20.5706 12.1291C20.3346 12.3651 20.0339 12.5258 19.7066 12.5909C19.3792 12.656 19.0399 12.6226 18.7316 12.4949C18.4232 12.3672 18.1597 12.1509 17.9743 11.8734C17.7888 11.5959 17.6899 11.2696 17.6899 10.9358C17.6899 10.4883 17.8677 10.0591 18.1841 9.7426C18.5006 9.42614 18.9298 9.24835 19.3774 9.24835ZM11.5024 17.6858C11.1686 17.6858 10.8423 17.5869 10.5648 17.4015C10.2873 17.216 10.071 16.9525 9.94332 16.6441C9.8156 16.3358 9.78218 15.9965 9.84729 15.6691C9.9124 15.3418 10.0731 15.0411 10.3091 14.8051C10.5451 14.5691 10.8458 14.4084 11.1732 14.3433C11.5005 14.2782 11.8398 14.3116 12.1481 14.4393C12.4565 14.567 12.72 14.7833 12.9055 15.0608C13.0909 15.3383 13.1899 15.6646 13.1899 15.9983C13.1899 16.4459 13.0121 16.8751 12.6956 17.1916C12.3791 17.5081 11.9499 17.6858 11.5024 17.6858ZM19.3774 22.7483C19.0436 22.7483 18.7174 22.6494 18.4398 22.464C18.1623 22.2785 17.946 22.015 17.8183 21.7066C17.6906 21.3983 17.6572 21.059 17.7223 20.7316C17.7874 20.4043 17.9481 20.1036 18.1841 19.8676C18.4201 19.6316 18.7208 19.4709 19.0482 19.4058C19.3755 19.3407 19.7148 19.3741 20.0231 19.5018C20.3315 19.6295 20.595 19.8458 20.7805 20.1233C20.9659 20.4008 21.0649 20.7271 21.0649 21.0608C21.0649 21.5084 20.8871 21.9376 20.5706 22.2541C20.2541 22.5706 19.8249 22.7483 19.3774 22.7483Z"
+                    fill="white"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default TransactionDepositModal;

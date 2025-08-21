@@ -1,0 +1,172 @@
+stages:
+  - build
+  - deploy
+
+docker-build:
+  image: docker:24.0
+  stage: build
+  services:
+    - docker:24.0-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "" 
+    DOCKER_HOST: "tcp://docker:2375"
+    BUILDX_VERSION: "v0.12.1"
+    DOCKER_BUILDKIT: 1
+  before_script:
+    - apk add --no-cache curl wget
+    - |
+      timeout 30s sh -c "until docker info > /dev/null 2>&1; do echo 'Waiting for docker to be ready...'; sleep 1; done"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    - mkdir -p ~/.docker/cli-plugins/
+    - wget -O ~/.docker/cli-plugins/docker-buildx "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64"
+    - chmod +x ~/.docker/cli-plugins/docker-buildx
+    - docker buildx create --use --name mybuilder --driver docker-container
+    - docker buildx inspect --bootstrap
+  script:
+    - |
+      TAG=$CI_COMMIT_SHA
+      VERSION=$(date +%Y.%m.%d)-${CI_COMMIT_SHA:0:8}
+      
+      # Build and push main image
+      docker buildx build --pull --push \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+        --build-arg VCS_REF=${CI_COMMIT_SHA} \
+        --build-arg VERSION=${VERSION} \
+        -t "$CI_REGISTRY_IMAGE:${TAG}" \
+        -t "$CI_REGISTRY_IMAGE:${VERSION}" \
+        -t "$CI_REGISTRY_IMAGE:latest" .
+
+    - docker buildx rm mybuilder || true
+  only:
+    - main
+    - dev
+    - staging
+
+
+.Deploy:Swarm: &Deploy_Swarm
+  stage: deploy
+  image: docker:24.0
+  cache: {}
+  before_script:
+    - export DOCKER_TLS_VERIFY=1
+    - export TAG=$CI_COMMIT_SHA
+    - export VERSION=$(date +%Y.%m.%d)-${CI_COMMIT_SHA:0:8}
+    - mkdir -p ~/.docker
+    - echo "$TLSCACERT" > ~/.docker/ca.pem
+    - echo "$TLSCERT" > ~/.docker/cert.pem
+    - echo "$TLSKEY" > ~/.docker/key.pem
+    - chmod 600 ~/.docker/*.pem  # Add proper permissions
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+  - |
+    cat > .env << EOF
+    TZ=${TZ}
+    STACK_NAME=${STACK_NAME}
+    ENVIRONMENT=${ENVIRONMENT}
+    NODE_ENV=${NODE_ENV}
+    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    NEXT_PUBLIC_SOCKET_API_URL=${NEXT_PUBLIC_SOCKET_API_URL}
+    REACT_APP_VERSION=${REACT_APP_VERSION}
+    FQDN=${FQDN}
+    URL_PATH=${URL_PATH}
+    EOF
+
+  # Create local environment file for Next.js
+  - |
+    cat > .env.local << EOF
+    # Local environment variables for Next.js
+    TZ=${TZ}
+    STACK_NAME=${STACK_NAME}
+    ENVIRONMENT=${ENVIRONMENT}
+    NODE_ENV=${NODE_ENV}
+    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    NEXT_PUBLIC_SOCKET_API_URL=${NEXT_PUBLIC_SOCKET_API_URL}
+    REACT_APP_VERSION=${REACT_APP_VERSION}
+    FQDN=${FQDN}
+    URL_PATH=${URL_PATH}
+    EOF
+
+  # Create networks with error handling
+  - |
+    for network in backend-net traefik-public; do
+      if ! docker network ls | grep -q $network; then
+        docker network create -d overlay --attachable $network || true
+      fi
+    done
+
+  # Pull and deploy with health check
+  - docker pull $CI_REGISTRY_IMAGE:$TAG
+  - docker stack deploy -c docker-compose.yml $STACK_NAME --with-registry-auth --prune
+  
+  after_script:
+    - rm -rf ~/.docker/*.pem
+
+Deploy:TWEZIMBE_C01:
+  <<: *Deploy_Swarm
+  environment:
+    name: "PROD/TWEZIMBE-APP"
+    url: https://app.twezimbe.com
+  variables:
+    DOCKER_HOST: $DOCKER_HOST_TWZ_C01
+    TLSCACERT: $DOCKER_CACERT_TWZ_C01
+    TLSCERT: $DOCKER_CERT_TWZ_C01
+    TLSKEY: $DOCKER_KEY_TWZ_C01
+    NODE_ENV: production
+    TZ: Africa/Kampala
+    STACK_NAME: client-app-web
+    ENVIRONMENT: production
+    FQDN: app.twezimbe.com
+    URL_PATH: /
+    NEXT_PUBLIC_API_URL: https://client-api.twezimbe.com
+    NEXT_PUBLIC_SOCKET_API_URL: https://client-api.twezimbe.com
+    REACT_APP_VERSION: v3.1.0
+  when: manual
+  only:
+    - main
+
+Deploy:TWEZIMBE_C02:
+  <<: *Deploy_Swarm
+  environment:
+    name: "STAGING/TWEZIMBE-APP"
+    url: https://staging-app.twezimbe.com
+  variables:
+    DOCKER_HOST: $DOCKER_HOST_TWZ_C02
+    TLSCACERT: $DOCKER_CACERT_TWZ_C02
+    TLSCERT: $DOCKER_CERT_TWZ_C02
+    TLSKEY: $DOCKER_KEY_TWZ_C02
+    NODE_ENV: production
+    TZ: Africa/Kampala
+    STACK_NAME: client-app-web
+    ENVIRONMENT: staging
+    FQDN: staging-app.twezimbe.com
+    URL_PATH: /
+    NEXT_PUBLIC_API_URL: https://staging-client-api.twezimbe.com
+    NEXT_PUBLIC_SOCKET_API_URL: https://staging-client-api.twezimbe.com
+    REACT_APP_VERSION: v3.1.0
+  only:
+    - main
+    - staging
+
+Deploy:TWEZIMBE_C03:
+  <<: *Deploy_Swarm
+  environment:
+    name: "DEV/TWEZIMBE-APP"
+    url: https://dev-app.twezimbe.com
+  variables:
+    DOCKER_HOST: $DOCKER_HOST_TWZ_C03
+    TLSCACERT: $DOCKER_CACERT_TWZ_C03
+    TLSCERT: $DOCKER_CERT_TWZ_C03
+    TLSKEY: $DOCKER_KEY_TWZ_C03 
+    NODE_ENV: production 
+    TZ: Africa/Kampala
+    STACK_NAME: client-app-web
+    ENVIRONMENT: development
+    FQDN: dev-app.twezimbe.com
+    URL_PATH: /
+    NEXT_PUBLIC_API_URL: https://dev-client-api.twezimbe.com
+    NEXT_PUBLIC_SOCKET_API_URL: https://staging-client-api.twezimbe.com
+    REACT_APP_VERSION: v3.1.0
+  only:
+    - dev

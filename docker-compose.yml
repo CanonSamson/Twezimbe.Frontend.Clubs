@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+
+  client-appgw:
+    image: $CI_REGISTRY_IMAGE:$TAG
+    env_file:
+      - .env
+    networks:
+      - traefik-public
+      - backend-net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: any
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.client-app-web.rule=Host(`${FQDN?err}`)"
+        - "traefik.http.routers.client-app-web.entrypoints=websecure"
+        - "traefik.http.routers.client-app-web.tls=true"
+        - "traefik.http.services.client-app-web.loadbalancer.server.port=8000"
+
+networks:
+  traefik-public:
+    external: true
+  backend-net:
+    external: true
